@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+	<title>
+		Shutikova Daryna 301 group
+	</title>
+	<style>
+		body {
+			font-family: "Segoe UI", Arial, sans-serif;
+			background: #c4c6c9;
+			color: #333;
+			margin: 0;
+			padding: 20px;
+		}
+
+		h1 {
+			text-align: center;
+			color: #2c3e50;
+			margin-bottom: 20px;
+		}
+
+		table {
+			border-collapse: collapse;
+			margin: 20px auto;
+			background: #d9dbdf;
+			border-radius: 8px;
+			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		}
+
+		td {
+			padding: 10px 15px;
+			text-align: center;
+		}
+
+		input[type="number"] {
+			width: 60px;
+			padding: 5px;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			text-align: center;
+		}
+
+		font[color="red"] {
+			font-weight: bold;
+			color: #e74c3c;
+		}
+
+		font[color="blue"] {
+			font-weight: bold;
+			color: #3498db;
+		}
+
+		font[color="green"] {
+			font-weight: bold;
+			color: #27ae60;
+		}
+
+		#graph {
+			margin-top: 30px;
+			text-align: center;
+		}
+
+		#graph img {
+			border: 2px solid #ddd;
+			border-radius: 8px;
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+			max-width: 100%;
+		}
+
+		span {
+			font-weight: bold;
+			color: #2c3e50;
+		}
+
+		.alpha-block {
+			background: #ecf0f1;
+			border-radius: 6px;
+			padding: 8px;
+			margin: 5px;
+		}
+	</style>
+
+	<script type="text/javascript">
+		function FuzzyNumber(a1, a0, a2) {
+			var X = [a1, a0, a2].map(Number).sort(function (a, b) { return a - b; });
+			this.x1 = X[0];
+			this.x2 = X[1];
+			this.x3 = X[2];
+		};
+
+		FuzzyNumber.prototype.toString = function () {
+			with (this) return `[${x1}; ${x2}; ${x3}]`;
+		};
+
+		FuzzyNumber.prototype.toStringRules = function (strFor) {
+			strFor = strFor || ", при";
+			with (this) return [`0${strFor} x <= ${x1} ∪ x 	>= ${x3}`,
+			`(x - ${x1}) / ${x2 - x1}${strFor} ${x1} < x <= ${x2}`,
+			`(${x3} - x) / ${x3 - x2}${strFor} ${x2} < x < ${x3}`];
+		};
+
+		FuzzyNumber.prototype.toAlpha = function () {
+			with (this) return `[${x1} + ${x2 - x1}α, ${x3} - ${x3 - x2}α]`;
+		};
+
+		FuzzyNumber.prototype.alpha = function (x) {
+
+			with (this) return ((x <= x1) || (x >= x3)) ? 0 :
+				((x1 < x) && (x <= x2)) ? (x - x1) / (x2 - x1) :
+					((x2 < x) && (x < x3)) ? (x3 - x) / (x3 - x2) : false;
+		};
+
+		FuzzyNumber.prototype.add = function (B) {
+			return new FuzzyNumber(this.x1 + B.x1, this.x2 + B.x2, this.x3 + B.x3);
+		};
+
+		function calc() {
+			var elem = function (id) {
+				return document.getElementById(id);
+			}
+			var round = function (x) {
+				return Math.round(x * 100) / 100;
+
+			}
+			var A = new FuzzyNumber(elem("A_x1").value, elem("A_x2").value, elem("A_x3").value);
+			var B = new FuzzyNumber(elem("B_x1").value, elem("B_x2").value, elem("B_x3").value);
+			var C = A.add(B);
+			var x = +elem("X").value;
+			elem("C_x1").innerText = C.x1;
+			elem("C_x2").innerText = C.x2;
+			elem("C_x3").innerText = C.x3;
+			elem("uA").innerText = round(A.alpha(x));
+			elem("uB").innerText = round(B.alpha(x));
+			elem("uC").innerText = round(C.alpha(x));
+			elem("A_model").innerHTML = A.toStringRules().join("<br>");
+			elem("B_model").innerHTML = B.toStringRules().join("<br>");
+			elem("C_model").innerHTML = C.toStringRules().join("<br>");
+			elem("A_alpha").innerText = A.toAlpha();
+			elem("B_alpha").innerText = B.toAlpha();
+			elem("C_alpha").innerText = C.toAlpha();
+
+			var widthpx = 600, heightpx = 201;
+			var min = Math.min(A.x1, B.x1, C.x1, x);
+			var max = Math.max(A.x3, B.x3, C.x3, x);
+			min = Math.floor((min - (max - min) * 0.1) / 10) * 10;
+			max = Math.ceil((max + (max - min) * 0.1) / 10) * 10;
+			var canvas = document.createElement("canvas");
+			var canv = canvas.getContext("2d");
+			canvas.width = widthpx;
+			canvas.height = heightpx;
+			var scale = widthpx / (max - min);
+
+			drawFuzzyNumber = function (fnum, color, pos) {
+				canv.strokeStyle = color;
+				canv.fillStyle = color;
+				canv.beginPath();
+				canv.moveTo((fnum.x1 - min) * scale, heightpx / 2);
+				canv.lineTo((fnum.x2 - min) * scale, heightpx / 6);
+				canv.lineTo((fnum.x3 - min) * scale, heightpx / 2);
+				canv.stroke();
+				canv.fillText(round(fnum.x1), (fnum.x1 - min) * scale, heightpx / 2 + 12 * pos);
+				canv.fillText(round(fnum.x2), (fnum.x2 - min) * scale, heightpx / 2 + 12 * pos);
+				canv.fillText(round(fnum.x3), (fnum.x3 - min) * scale, heightpx / 2 + 12 * pos);
+			}
+			
+			canv.lineWidth = 1;
+			canv.beginPath();
+			canv.moveTo(0, heightpx / 2);
+			canv.lineTo(widthpx, heightpx / 2);
+			canv.stroke();
+			
+			for (var i = 0, len = max - min; i < len; i++) {
+				canv.beginPath();
+				canv.moveTo(i * scale, heightpx / 2 + 1);
+				canv.lineTo(i * scale, heightpx / 2 - 1);
+				canv.stroke();
+			};
+			canv.beginPath();
+			canv.moveTo(widthpx, heightpx / 2 + 1);
+			canv.lineTo(widthpx, heightpx / 2 - 1);
+			canv.stroke();
+							
+			canv.fillText(min, 0, heightpx / 2 + 10);
+			canv.fillText(max, widthpx - 15, heightpx / 2 + 12);
+
+			
+			canv.lineWidth = 3;
+			canv.textAlign = "center";
+			canv.beginPath();
+			canv.moveTo((x - min) * scale, heightpx / 2);
+			canv.lineTo((x - min) * scale, heightpx / 6);
+			canv.stroke();
+			canv.fillText(x, (x - min) * scale, heightpx / 6 - 2);
+
+			
+			drawFuzzyNumber(A, "red", 1);
+			drawFuzzyNumber(B, "blue", 2);
+			drawFuzzyNumber(C, "green", 3);
+
+			var graph = document.getElementById("graph");
+			var img = document.createElement("img");
+			img.src = canvas.toDataURL("image/png");
+			if (graph.children[0]) {
+				graph.replaceChild(img, graph.children[0]);
+			} else {
+				graph.appendChild(img);
+			}
+		}
+	</script>
+	<style type="text/css">
+		td {
+			padding: 5px;
+		}
+
+		input[type="number"] {
+			width: 30px;
+		}
+
+		table div {
+			float: left;
+			margin: 10px 0 0 0;
+		}
+
+		table:nth-child(2n) font {
+			margin: 0;
+			padding: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<center>
+		<table>
+			<tr>
+				<td></td>
+				<td><u>x</u></td>
+				<td>x&#x0302;</td>
+				<td>x&#x0304;</td>
+				<td>x:</td>
+				<td><input id="X" type="number" value="5" /></td>
+			</tr>
+			<tr>
+				<td>
+					<font color="red">A:</font>
+				</td>
+				<td><input id="A_x1" type="number" value="-6" /></td>
+				<td><input id="A_x2" type="number" value="-3" /></td>
+				<td><input id="A_x3" type="number" value="-1" /></td>
+				<td>μA&#x032F;:</td>
+				<td><span id="uA"></span></td>
+			</tr>
+			<tr>
+				<td>
+					<font color="blue">B:</font>
+				</td>
+				<td><input id="B_x1" type="number" value="3" /></td>
+				<td><input id="B_x2" type="number" value="5" /></td>
+				<td><input id="B_x3" type="number" value="7" /></td>
+				<td>μB&#x032F;:</td>
+				<td><span id="uB"></span></td>
+			</tr>
+			<tr>
+				<td>
+					<font color="green">C:</font>
+				</td>
+				<td><span id="C_x1"></span></td>
+				<td><span id="C_x2"></span></td>
+				<td><span id="C_x3"></span></td>
+				<td>μC&#x032F;:</td>
+				<td><span id="uC"></span></td>
+			</tr>
+		</table>
+		<table>
+			<tr>
+				<td>
+					<div>μA&#x032F; =</div>
+				</td>
+				<td>
+					<font size="20">{</font>
+				</td>
+				<td>
+					<span id="A_model"></span>
+				</td>
+				<td>
+					<div>μB&#x032F; =</div>
+				</td>
+				<td>
+					<font size="20">{</font>
+				</td>
+				<td>
+					<span id="B_model"></span>
+				</td>
+				<td>
+					<div>μC&#x032F; =</div>
+				</td>
+				<td>
+					<font size="20">{</font>
+				</td>
+				<td>
+					<span id="C_model"></span>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					Aα =
+				</td>
+				<td colspan="2">
+					<span id="A_alpha"></span>
+				</td>
+				<td>
+					Bα =
+				</td>
+				<td colspan="2">
+					<span id="B_alpha"></span>
+				</td>
+				<td>
+					Cα =
+				</td>
+				<td colspan="2">
+					<span id="C_alpha"></span>
+				</td>
+			</tr>
+		</table>
+		<div id="graph"></div>
+	</center>
+</body>
+<script type="text/javascript">
+	Array.prototype.forEach.call(document.getElementsByTagName("input"), function (elem) {
+		elem.onchange = function () {
+			calc();
+		};
+	});
+	calc();
+</script>
+
+</html>
